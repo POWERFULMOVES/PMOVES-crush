@@ -1,28 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/charmbracelet/crush/internal/config/config",
+  "$id": "https://github.com/POWERFULMOVES/PMOVES-crush/internal/config/config",
   "$ref": "#/$defs/Config",
   "$defs": {
     "Attribution": {
       "properties": {
-        "trailer_style": {
-          "type": "string",
-          "enum": [
-            "none",
-            "co-authored-by",
-            "assisted-by"
-          ],
-          "description": "Style of attribution trailer to add to commits",
-          "default": "assisted-by"
-        },
         "co_authored_by": {
           "type": "boolean",
-          "description": "Deprecated: use trailer_style instead",
-          "deprecated": true
+          "description": "Add Co-Authored-By PMOVES Agent trailer to commit messages",
+          "default": true
         },
         "generated_with": {
           "type": "boolean",
-          "description": "Add Generated with Crush line to commit messages and issues and PRs",
+          "description": "Add Generated with PMOVES-Crush line to commit messages and issues and PRs",
           "default": true
         }
       },
@@ -62,16 +52,6 @@
           },
           "type": "object",
           "description": "Model configurations for different model types"
-        },
-        "recent_models": {
-          "additionalProperties": {
-            "items": {
-              "$ref": "#/$defs/SelectedModel"
-            },
-            "type": "array"
-          },
-          "type": "object",
-          "description": "Recently used models sorted by most recent first"
         },
         "providers": {
           "additionalProperties": {
@@ -229,16 +209,6 @@
           "description": "Whether this MCP server is disabled",
           "default": false
         },
-        "disabled_tools": {
-          "items": {
-            "type": "string",
-            "examples": [
-              "get-library-doc"
-            ]
-          },
-          "type": "array",
-          "description": "List of tools from this MCP server to disable"
-        },
         "timeout": {
           "type": "integer",
           "description": "Timeout in seconds for MCP server connections",
@@ -298,20 +268,14 @@
         "can_reason": {
           "type": "boolean"
         },
-        "reasoning_levels": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
+        "has_reasoning_efforts": {
+          "type": "boolean"
         },
         "default_reasoning_effort": {
           "type": "string"
         },
         "supports_attachments": {
           "type": "boolean"
-        },
-        "options": {
-          "$ref": "#/$defs/ModelOptions"
         }
       },
       "additionalProperties": false,
@@ -326,33 +290,9 @@
         "context_window",
         "default_max_tokens",
         "can_reason",
-        "supports_attachments",
-        "options"
+        "has_reasoning_efforts",
+        "supports_attachments"
       ]
-    },
-    "ModelOptions": {
-      "properties": {
-        "temperature": {
-          "type": "number"
-        },
-        "top_p": {
-          "type": "number"
-        },
-        "top_k": {
-          "type": "integer"
-        },
-        "frequency_penalty": {
-          "type": "number"
-        },
-        "presence_penalty": {
-          "type": "number"
-        },
-        "provider_options": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
     },
     "Options": {
       "properties": {
@@ -366,17 +306,6 @@
           },
           "type": "array",
           "description": "Paths to files containing context information for the AI"
-        },
-        "skills_paths": {
-          "items": {
-            "type": "string",
-            "examples": [
-              "~/.config/crush/skills",
-              "./skills"
-            ]
-          },
-          "type": "array",
-          "description": "Paths to directories containing Agent Skills (folders with SKILL.md files)"
         },
         "tui": {
           "$ref": "#/$defs/TUIOptions",
@@ -407,14 +336,10 @@
         },
         "disabled_tools": {
           "items": {
-            "type": "string",
-            "examples": [
-              "bash",
-              "sourcegraph"
-            ]
+            "type": "string"
           },
           "type": "array",
-          "description": "List of built-in tools to disable and hide from the agent"
+          "description": "Tools to disable"
         },
         "disable_provider_auto_update": {
           "type": "boolean",
@@ -429,21 +354,13 @@
           "type": "boolean",
           "description": "Disable sending metrics",
           "default": false
-        },
-        "initialize_as": {
-          "type": "string",
-          "description": "Name of the context file to create/update during project initialization",
-          "default": "AGENTS.md",
-          "examples": [
-            "AGENTS.md",
-            "CRUSH.md",
-            "CLAUDE.md",
-            "docs/LLMs.md"
-          ]
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "required": [
+        "disabled_tools"
+      ]
     },
     "Permissions": {
       "properties": {
@@ -490,7 +407,6 @@
           "type": "string",
           "enum": [
             "openai",
-            "openai-compat",
             "anthropic",
             "gemini",
             "azure",
@@ -505,10 +421,6 @@
           "examples": [
             "$OPENAI_API_KEY"
           ]
-        },
-        "oauth": {
-          "$ref": "#/$defs/Token",
-          "description": "OAuth2 token for authentication with the provider"
         },
         "disable": {
           "type": "boolean",
@@ -529,10 +441,6 @@
         "extra_body": {
           "type": "object",
           "description": "Additional fields to include in request bodies"
-        },
-        "provider_options": {
-          "type": "object",
-          "description": "Additional provider-specific options for this provider"
         },
         "models": {
           "items": {
@@ -570,51 +478,18 @@
           ],
           "description": "Reasoning effort level for OpenAI models that support it"
         },
-        "think": {
-          "type": "boolean",
-          "description": "Enable thinking mode for Anthropic models that support reasoning"
-        },
         "max_tokens": {
           "type": "integer",
           "maximum": 200000,
+          "minimum": 1,
           "description": "Maximum number of tokens for model responses",
           "examples": [
             4096
           ]
         },
-        "temperature": {
-          "type": "number",
-          "maximum": 1,
-          "minimum": 0,
-          "description": "Sampling temperature",
-          "examples": [
-            0.7
-          ]
-        },
-        "top_p": {
-          "type": "number",
-          "maximum": 1,
-          "minimum": 0,
-          "description": "Top-p (nucleus) sampling parameter",
-          "examples": [
-            0.9
-          ]
-        },
-        "top_k": {
-          "type": "integer",
-          "description": "Top-k sampling parameter"
-        },
-        "frequency_penalty": {
-          "type": "number",
-          "description": "Frequency penalty to reduce repetition"
-        },
-        "presence_penalty": {
-          "type": "number",
-          "description": "Presence penalty to increase topic diversity"
-        },
-        "provider_options": {
-          "type": "object",
-          "description": "Additional provider-specific options for the model"
+        "think": {
+          "type": "boolean",
+          "description": "Enable thinking mode for Anthropic models that support reasoning"
         }
       },
       "additionalProperties": false,
@@ -648,30 +523,6 @@
       "type": "object",
       "required": [
         "completions"
-      ]
-    },
-    "Token": {
-      "properties": {
-        "access_token": {
-          "type": "string"
-        },
-        "refresh_token": {
-          "type": "string"
-        },
-        "expires_in": {
-          "type": "integer"
-        },
-        "expires_at": {
-          "type": "integer"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "access_token",
-        "refresh_token",
-        "expires_in",
-        "expires_at"
       ]
     },
     "ToolLs": {
