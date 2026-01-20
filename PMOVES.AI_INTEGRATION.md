@@ -1,8 +1,8 @@
-# PMOVES.AI Integration Guide for PMOVES Danger Infra
+# PMOVES.AI Integration Guide for PMOVES Crush
 
 ## Integration Complete
 
-The PMOVES.AI integration template has been applied to PMOVES Danger Infra.
+The PMOVES.AI integration template has been applied to PMOVES Crush.
 
 ## Next Steps
 
@@ -11,7 +11,7 @@ The PMOVES.AI integration template has been applied to PMOVES Danger Infra.
 Edit the following files with your service-specific values:
 
 - `env.shared` - Base environment configuration
-- `env.tier-api` - API tier specific configuration
+- `env.tier-data` - DATA tier specific configuration
 - `chit/secrets_manifest_v2.yaml` - Add your service's required secrets
 
 ### 2. Update Docker Compose
@@ -20,8 +20,8 @@ Add the PMOVES.AI environment anchor to your `docker-compose.yml`:
 
 ```yaml
 services:
-  danger-infra:
-    <<: [*env-tier-api, *pmoves-healthcheck]
+  pmoves-crush:
+    <<: [*env-tier-data, *pmoves-healthcheck]
     # Your existing service configuration...
 ```
 
@@ -47,11 +47,11 @@ from pmoves_announcer import announce_service
 @app.on_event("startup")
 async def startup():
     await announce_service(
-        slug="danger-infra",
-        name="PMOVES Danger Infra",
-        url=f"http://danger-infra:8065",
-        port=8065,
-        tier="api"
+        slug="pmoves-crush",
+        name="PMOVES Crush",
+        url=f"http://pmoves-crush:8070",
+        port=8070,
+        tier="data"
     )
 ```
 
@@ -59,10 +59,10 @@ async def startup():
 
 ```bash
 # Test health check
-curl http://localhost:8065/healthz
+curl http://localhost:8070/healthz
 
 # Verify environment variables loaded
-docker compose exec danger-infra env | grep PMOVES
+docker compose exec pmoves-crush env | grep PMOVES
 
 # Verify NATS announcement
 nats sub "services.announce.v1"
@@ -70,18 +70,18 @@ nats sub "services.announce.v1"
 
 ## Service Details
 
-- **Name:** PMOVES Danger Infra
-- **Slug:** danger-infra
-- **Tier:** api
-- **Port:** 8065
-- **Health Check:** http://localhost:8065/healthz
+- **Name:** PMOVES Crush
+- **Slug:** pmoves-crush
+- **Tier:** data
+- **Port:** 8070
+- **Health Check:** http://localhost:8070/healthz
 - **NATS Enabled:** True
 - **GPU Enabled:** False
 
 ## Files Created
 
 - `env.shared` - Base PMOVES.AI environment
-- `env.tier-api` - Tier-specific environment
+- `env.tier-data` - Tier-specific environment
 - `chit/secrets_manifest_v2.yaml` - CHIT secrets configuration
 - `pmoves_health/` - Health check module
 - `pmoves_announcer/` - NATS service announcer
