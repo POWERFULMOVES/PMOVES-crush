@@ -4,41 +4,16 @@ PMOVES.AI Health Endpoint Template
 Standard health check endpoint for all PMOVES services.
 Follows PMOVES.AI conventions for service health monitoring.
 
-This module provides:
-- HealthChecker: Class for managing multiple dependency health checks
-- DependencyCheck: Base class for creating custom health checks
-- DatabaseCheck, HTTPCheck, NATSCheck: Pre-built check implementations
-- health_check(): Decorator for registering checks
-- create_health_app(): Factory for creating standalone health apps
-- health_check_router: FastAPI router for adding to existing apps
-
-Health Endpoint Behavior:
-- Returns HTTP 200 when status is "healthy" or "degraded"
-- Returns HTTP 503 when status is "unhealthy"
-- Includes timestamp, service name, and individual check results
-
 Usage:
-    from pmoves_health import create_health_app, HealthChecker, NATSCheck
-
-    # Create a standalone health app
-    app = create_health_app("my-service")
+    from pmoves_health import create_health_app
+    app = create_health_app()
 
     # Or add to existing FastAPI app
     from pmoves_health import health_check_router
     app.include_router(health_check_router)
-
-    # Or use the checker directly
-    checker = HealthChecker("my-service")
-    checker.nats("nats://nats:4222")
-    status = await checker.check_all()
-
-Health Status Values:
-- healthy: All required checks passing
-- degraded: Optional checks failing, required checks passing
-- unhealthy: One or more required checks failing
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 from functools import wraps
 from typing import Any, Callable, Dict, List
 import os
@@ -120,19 +95,13 @@ class NATSCheck(DependencyCheck):
         self.nats_url = nats_url
 
     async def check(self) -> bool:
-        nc = None
         try:
             from nats.aio.client import Client as NATS
             nc = await NATS.connect(self.nats_url, connect_timeout=2)
+            await nc.close()
             return True
         except Exception:
             return False
-        finally:
-            if nc:
-                try:
-                    await nc.close()
-                except Exception:
-                    pass
 
 
 class HealthChecker:
@@ -168,7 +137,7 @@ class HealthChecker:
         results = {
             "status": HealthStatus.HEALTHY,
             "service": self.service_name,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
         all_healthy = True
@@ -217,28 +186,14 @@ _health_checker = HealthChecker()
 
 
 def health_check(checks: List[DependencyCheck] = None):
-    """
-    Decorator to register health checks for a service.
-
-    NOTE: Checks are registered once at import time, not on each call.
-    Use this decorator on functions that need dependency checks.
-
-    Args:
-        checks: List of dependency checks to register
-
-    Example:
-        @health_check([DatabaseCheck(connect_fn)])
-        async def my_handler():
-            ...
-    """
+    """Decorator to add health checks to a function."""
     def decorator(func: Callable):
-        # Register checks once when decorator is applied, not on each call
-        if checks:
-            for check in checks:
-                _health_checker.add_check(check)
-
         @wraps(func)
         async def wrapper(*args, **kwargs):
+            checker = _health_checker
+            if checks:
+                for check in checks:
+                    checker.add_check(check)
             return await func(*args, **kwargs)
         return wrapper
     return decorator
@@ -276,19 +231,8 @@ if FASTAPI_AVAILABLE:
 
     @health_check_router.get(HEALTH_CHECK_PATH)
     async def healthz():
-        """
-        Standard health check endpoint.
-
-        Returns:
-            - 200 with status "healthy" or "degraded"
-            - 503 with status "unhealthy"
-        """
-        status = await get_health_status()
-
-        # Return proper HTTP status codes
-        if status.get("status") == HealthStatus.UNHEALTHY:
-            return JSONResponse(content=status, status_code=503)
-        return status
+        """Standard health check endpoint."""
+        return await get_health_status()
 
     def create_health_app(service_name: str = None) -> "FastAPI":
         """Create a minimal FastAPI app with health check."""

@@ -4,14 +4,8 @@ PMOVES.AI Service Announcer Template
 NATS service discovery announcer for all PMOVES services.
 Publishes service announcements to the services.announce.v1 subject.
 
-This module provides:
-- ServiceAnnouncer: Main class for announcing service availability
-- ServiceAnnouncement: Data class for announcement messages
-- BackgroundAnnouncer: Periodic re-announcement for long-running services
-- announce_service(): Convenience function for one-time announcements
-
 Usage:
-    from pmoves_announcer import ServiceAnnouncer, announce_service
+    from service_announcer import ServiceAnnouncer, announce_service
 
     # Create announcement
     announcer = ServiceAnnouncer(
@@ -33,33 +27,27 @@ Usage:
         port=8080,
         tier="api"
     )
-
-NATS Subject: services.announce.v1
-Message Format: JSON with slug, name, url, health_check, tier, port, timestamp, metadata
 """
 
 import asyncio
 import json
 import os
 from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict, List, Optional
+from enum import Enum
 
 
-# Import ServiceTier from shared types if available, otherwise define locally
-try:
-    from pmoves_common import ServiceTier
-except ImportError:
-    from enum import Enum
-
-    class ServiceTier(str, Enum):
-        """PMOVES service tiers (6-tier architecture)."""
-        DATA = "data"
-        API = "api"
-        LLM = "llm"
-        MEDIA = "media"
-        AGENT = "agent"
-        WORKER = "worker"
+class ServiceTier(str, Enum):
+    """PMOVES service tiers."""
+    DATA = "data"
+    API = "api"
+    LLM = "llm"
+    MEDIA = "media"
+    AGENT = "agent"
+    WORKER = "worker"
+    APP = "app"
+    UI = "ui"
 
 
 @dataclass
@@ -77,7 +65,7 @@ class ServiceAnnouncement:
     health_check: str
     tier: ServiceTier
     port: int
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     # NATS subject for announcements
@@ -109,7 +97,7 @@ class ServiceAnnouncement:
             health_check=data["health_check"],
             tier=ServiceTier(data["tier"]),
             port=data["port"],
-            timestamp=data.get("timestamp", datetime.now(timezone.utc).isoformat()),
+            timestamp=data.get("timestamp", datetime.utcnow().isoformat()),
             metadata=data.get("metadata", {}),
         )
 
@@ -167,7 +155,7 @@ class ServiceAnnouncer:
             health_check=self.health_check,
             tier=self.tier,
             port=self.port,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.utcnow().isoformat(),
             metadata=self.metadata,
         )
 
