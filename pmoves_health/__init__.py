@@ -123,7 +123,8 @@ class NATSCheck(DependencyCheck):
         nc = None
         try:
             from nats.aio.client import Client as NATS
-            nc = await NATS.connect(self.nats_url, connect_timeout=2)
+            nc = NATS()
+            await nc.connect(self.nats_url, connect_timeout=2)
             return True
         except Exception:
             return False
