@@ -42,15 +42,13 @@ Thumbs.db
 .env
 .env.local
 
-# Nix/direnv
-.direnv/
-
 **/.crush/**
 
 /crush
 /tmp/
 
 manpages/
-completions/crush.*sh
+completions/
+!internal/tui/components/completions/
 .prettierignore
-.task
+**/__pycache__/
