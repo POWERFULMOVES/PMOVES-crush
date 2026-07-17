@@ -1,0 +1,3 @@
+[submodule "pmoves-catwalk"]
+	path = pmoves-catwalk
+	url = https://github.com/charmbracelet/catwalk.git
