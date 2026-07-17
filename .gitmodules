@@ -1,0 +1,6 @@
+[submodule "pmoves-gum"]
+	path = pmoves-gum
+	url = https://github.com/POWERFULMOVES/pmoves-gum.git
+[submodule "pmoves-vhs"]
+	path = pmoves-vhs
+	url = https://github.com/POWERFULMOVES/pmoves-vhs.git
