@@ -219,3 +219,7 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
+
+// PMOVES: route catwalk through our fork to support PMOVES-specific providers
+// (TensorZero gateway routing). Upstream PRs can be contributed back.
+replace charm.land/catwalk => github.com/POWERFULMOVES/pmoves-catwalk v0.49.25
