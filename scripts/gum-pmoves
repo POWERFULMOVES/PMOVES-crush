@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# gum-pmoves — PMOVES-themed gum wrapper
+#
+# Sources agent signature colors from agent_signatures.yaml and applies
+# them as gum style defaults. Falls back to Crush sky-blue (#0EA5E9).
+#
+# Usage:
+#   gum-pmoves choose "option1" "option2"    # themed choose
+#   gum-pmoves confirm "Are you sure?"        # themed confirm
+#   gum-pmoves input --placeholder "Name"     # themed input
+#   source gum-pmoves-env                     # export PMOVES_GUM_* vars
+#
+# To override the agent, set PMOVES_AGENT_ID (e.g. "claude-opus", "darkxside").
+set -euo pipefail
+
+# ── Resolve PMOVES agent colors ──────────────────────────────────────────────
+
+PMOVES_AGENT_ID="${PMOVES_AGENT_ID:-crush}"
+PMOVES_DEFAULT_COLOR="#0EA5E9"
+PMOVES_DEFAULT_ACCENT="#7DD3FC"
+
+_pmoves_resolve_color() {
+  local yaml_file=""
+  for candidate in \
+    "${PMOVES_REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || true)}/pmoves/config/agent_signatures.yaml" \
+    "$HOME/pinokio/api/PMOVES.AI/pmoves/config/agent_signatures.yaml"; do
+    if [ -f "$candidate" ]; then
+      yaml_file="$candidate"
+      break
+    fi
+  done
+
+  if [ -z "$yaml_file" ] || ! command -v python3 >/dev/null 2>&1; then
+    echo "$PMOVES_DEFAULT_COLOR"
+    return
+  fi
+
+  python3 -c "
+import sys, yaml
+try:
+    sigs = yaml.safe_load(open('$yaml_file'))
+    agent = sigs.get('signatures', {}).get('$PMOVES_AGENT_ID', {})
+    print(agent.get('color', '$PMOVES_DEFAULT_COLOR'))
+except Exception:
+    print('$PMOVES_DEFAULT_COLOR')
+" 2>/dev/null || echo "$PMOVES_DEFAULT_COLOR"
+}
+
+PMOVES_COLOR="${PMOVES_GUM_COLOR:-$(_pmoves_resolve_color)}"
+
+# ── Gum style injection ──────────────────────────────────────────────────────
+
+# Export for subprocesses and gum's own --styled flags
+export PMOVES_GUM_COLOR="$PMOVES_COLOR"
+
+# Build gum flag defaults from PMOVES color
+GUM_COLOR_FLAGS=(
+  --cursor.foreground "$PMOVES_COLOR"
+  --header.foreground "$PMOVES_COLOR"
+  --prompt.foreground "$PMOVES_COLOR"
+  --selected.foreground "$PMOVES_DEFAULT_ACCENT"
+)
+
+# ── Dispatch ─────────────────────────────────────────────────────────────────
+
+if [ $# -eq 0 ]; then
+  echo "gum-pmoves — PMOVES-themed gum wrapper (agent: $PMOVES_AGENT_ID, color: $PMOVES_COLOR)"
+  echo ""
+  echo "Set PMOVES_AGENT_ID to change agent theme (e.g. crush, claude-opus, darkxside)"
+  echo "All gum commands are passed through with themed defaults."
+  exit 0
+fi
+
+# Pass through to real gum with PMOVES color flags prepended
+# for commands that support styling. For others, just pass through.
+case "$1" in
+  choose|filter|confirm|input|write|file|table)
+    exec gum "$@" "${GUM_COLOR_FLAGS[@]}"
+    ;;
+  spin)
+    exec gum "$@" --spinner.color "$PMOVES_COLOR"
+    ;;
+  style)
+    exec gum "$@"
+    ;;
+  *)
+    exec gum "$@"
+    ;;
+esac
