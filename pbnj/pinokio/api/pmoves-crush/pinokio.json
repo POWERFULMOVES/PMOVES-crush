@@ -1,0 +1,5 @@
+{
+  "title": "PMOVES Crush",
+  "description": "Launch PMOVES-Crush — the terminal gateway agent where model and user begin their journey together. Runs crush-pmoves one-shot launcher with full PMOVES context (AGENT_TRAIL, signatures, MCP servers, CHIT signing).",
+  "icon": "icon.png"
+}
