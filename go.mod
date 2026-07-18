@@ -219,3 +219,9 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
+
+// PMOVES: pmoves-catwalk submodule carries PMOVES-specific provider configs
+// (TensorZero). The go.mod replace is commented out because CI doesn't
+// initialize submodules before `go mod tidy`. Enable locally with:
+//   replace charm.land/catwalk => ./pmoves-catwalk
+// The upstream catwalk already includes Z.AI (GLM-5.2) and MiniMax providers.

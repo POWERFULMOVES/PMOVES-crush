@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# showtime-status — query Showtime API and render fleet health in terminal
+#
+# Fetches the Showtime API state machine (preflight → hold → showtime) and
+# renders a colored status line suitable for tmux status bars, shell prompts,
+# or Crush TUI integration via the bash tool.
+#
+# Usage:
+#   showtime-status                  # one-shot status line
+#   showtime-status --watch          # refresh every 5s
+#   showtime-status --json           # raw JSON output
+#   showtime-status --agents         # list agent health
+set -euo pipefail
+
+SHOWTIME_URL="${SHOWTIME_URL:-http://localhost:9225}"
+INTERVAL=5
+
+# ── Color helpers (ANSI) ─────────────────────────────────────────────────────
+
+green()  { printf '\033[32m%s\033[0m' "$1"; }
+yellow() { printf '\033[33m%s\033[0m' "$1"; }
+red()    { printf '\033[31m%s\033[0m' "$1"; }
+blue()   { printf '\033[34m%s\033[0m' "$1"; }
+cyan()   { printf '\033[36m%s\033[0m' "$1"; }
+
+# ── Fetch ────────────────────────────────────────────────────────────────────
+
+fetch_health() {
+  local response
+  response=$(timeout 3 bash -c "exec 3<>/dev/tcp/$(echo "$SHOWTIME_URL" | sed 's|http://||; s|/||g; s|:| /dev/tcp/|; s|/dev/tcp/|/dev/tcp/|' | head -1)/healthz" 2>/dev/null && echo "ok" || echo "down")
+  if [ "$response" = "down" ]; then
+    echo '{"state":"offline"}'
+    return
+  fi
+
+  # Try curl-like fetch via python
+  python3 -c "
+import urllib.request, json, sys
+try:
+    req = urllib.request.Request('$SHOWTIME_URL/health/all')
+    with urllib.request.urlopen(req, timeout=3) as resp:
+        print(json.dumps(json.loads(resp.read())))
+except Exception:
+    print(json.dumps({'state': 'offline'}))
+" 2>/dev/null || echo '{"state":"offline"}'
+}
+
+# ── Render ───────────────────────────────────────────────────────────────────
+
+render_status() {
+  local data="$1"
+
+  python3 -c "
+import json, sys
+
+data = json.loads('''$data''')
+state = data.get('state', 'unknown')
+services = data.get('services', {})
+total = len(services)
+healthy = sum(1 for s in services.values() if s.get('status') == 'healthy')
+
+if state == 'showtime' or (total > 0 and healthy == total):
+    icon = '◆'
+    color = '\033[32m'  # green
+elif state in ('hold', 'preflight'):
+    icon = '◇'
+    color = '\033[33m'  # yellow
+elif state == 'offline':
+    icon = '✕'
+    color = '\033[31m'  # red
+else:
+    icon = '?'
+    color = '\033[36m'  # cyan
+
+reset = '\033[0m'
+if total > 0:
+    print(f'{color}{icon} showtime {healthy}/{total}{reset}')
+elif state == 'offline':
+    print(f'{color}{icon} showtime offline{reset}')
+else:
+    print(f'{color}{icon} showtime {state}{reset}')
+" 2>/dev/null
+}
+
+render_json() {
+  python3 -c "import json; print(json.dumps(json.loads('''$1'''), indent=2))" 2>/dev/null || echo "$1"
+}
+
+render_agents() {
+  python3 -c "
+import urllib.request, json, sys
+try:
+    req = urllib.request.Request('$SHOWTIME_URL/agents')
+    with urllib.request.urlopen(req, timeout=3) as resp:
+        agents = json.loads(resp.read())
+        for a in agents:
+            status = a.get('status', 'unknown')
+            name = a.get('display_name', a.get('agent_id', '?'))
+            glyph = a.get('glyph', '·')
+            if status == 'healthy':
+                print(f'  \033[32m{glyph}\033[0m {name}: {status}')
+            else:
+                print(f'  \033[31m{glyph}\033[0m {name}: {status}')
+except Exception as e:
+    print(f'  Error fetching agents: {e}', file=sys.stderr)
+" 2>/dev/null
+}
+
+# ── Main ─────────────────────────────────────────────────────────────────────
+
+WATCH=false
+JSON_OUT=false
+AGENTS=false
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --watch) WATCH=true; shift ;;
+    --json) JSON_OUT=true; shift ;;
+    --agents) AGENTS=true; shift ;;
+    *) shift ;;
+  esac
+done
+
+if [ "$AGENTS" = true ]; then
+  render_agents
+  exit 0
+fi
+
+run_once() {
+  local data
+  data=$(fetch_health)
+  if [ "$JSON_OUT" = true ]; then
+    render_json "$data"
+  else
+    render_status "$data"
+  fi
+}
+
+if [ "$WATCH" = true ]; then
+  while true; do
+    clear
+    run_once
+    sleep "$INTERVAL"
+  done
+else
+  run_once
+fi
