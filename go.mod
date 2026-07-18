@@ -221,5 +221,6 @@ require (
 )
 
 // PMOVES: route catwalk through our fork to support PMOVES-specific providers
-// (TensorZero gateway routing). Upstream PRs can be contributed back.
-replace charm.land/catwalk => github.com/POWERFULMOVES/pmoves-catwalk v0.49.25-pmoves
+// (TensorZero gateway routing). Uses filesystem replace via the pmoves-catwalk
+// submodule. Upstream PRs can be contributed back.
+replace charm.land/catwalk => ./pmoves-catwalk
