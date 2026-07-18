@@ -21,13 +21,14 @@ Forked from `charmbracelet/catwalk` to add PMOVES-specific providers:
 ### Usage
 
 Build and run the catwalk server locally:
+
 ```bash
 cd pmoves-catwalk
 go run .  # serves on :8080
 ```
 
-Crush's `go.mod` uses `charm.land/catwalk` — once `POWERFULMOVES/pmoves-catwalk` is published,
-add a `replace` directive to route the import through the fork.
+Crush's `go.mod` routes `charm.land/catwalk` through the `POWERFULMOVES/pmoves-catwalk`
+fork via a `replace` directive. The fork carries the TensorZero provider addition.
 
 ## pmoves-gum — TUI Scripting
 
@@ -53,7 +54,7 @@ Forked from `charmbracelet/vhs` via `POWERFULMOVES/pmoves-vhs`.
 
 ## Theme Pipeline
 
-```
+```text
 agent_signatures.yaml
     ↓ generate.py
 pmoves/design/themes/*.json
@@ -67,7 +68,18 @@ Showtime persona-theme.js (browser overlay)
 ## Integration with PMOVES.AI
 
 These submodules live inside PMOVES-crush and are consumed by:
+
 - **PMOVES-crush TUI** — catwalk types for model picker, gum for launcher UX
 - **PBnJ launchers** — gum-powered menus in `pbnj/pinokio/api/pmoves-*`
 - **Showtime API** — VHS-generated content in SSE events
 - **Fleet scripts** — gum in `pmoves/scripts/` for interactive prompts
+
+### Current vs Planned
+
+| Component | Current Status | Planned Integration |
+|-----------|---------------|---------------------|
+| pmoves-catwalk | Submodule + go.mod replace + TensorZero provider | Self-hosted instance on fleet |
+| pmoves-gum | Submodule (clean mirror) + `gum-pmoves` wrapper script | Go-native theme injection |
+| pmoves-vhs | Submodule (clean mirror) + 3 demo tapes | CI-integrated demo regeneration |
+| Showtime | `showtime-status` CLI script | Go-native TUI status bar |
+| PBnJ | `pmoves-crush` Pinokio launcher | Full PBnJ app migration |
