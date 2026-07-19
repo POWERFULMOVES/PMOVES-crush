@@ -1,45 +1,47 @@
-# PMOVES.AI Integration Guide for PMOVES Danger Infra
+# PMOVES.AI Integration Contract
 
-## Integration Complete
+PMOVES-Crush tracks the current Charmbracelet Crush runtime and layers optional
+PMOVES.AI integration around it. The Go application does not require PMOVES
+services to start; integrations must verify configured endpoints before use.
 
-The PMOVES.AI integration template has been applied to PMOVES Danger Infra.
+## Runtime integration
 
-## Next Steps
+- The packaged command and release artifacts are named `pmoves-crush`.
+- Provider configuration supports `system_prompt_prefix`; deployments can use
+  that existing runtime hook to add PMOVES-specific TensorZero, Hi-RAG, Agent
+  Zero, and NATS context without changing Crush's recorded base prompt.
+- `pmoves_announcer`, `pmoves_health`, and `pmoves_registry` are reusable Python
+  helpers for services launched alongside PMOVES-Crush. They are not imported by
+  the Go binary.
+- `docker-compose.pmoves.yml` supplies API and data-tier anchors. It is a
+  composition fragment, not a standalone PMOVES stack.
 
-### 1. Customize Environment Variables
+## Environment
 
-Edit the following files with your service-specific values:
+Source the shared defaults before the appropriate tier file:
 
-- `env.shared` - Base environment configuration
-- `env.tier-api` - API tier specific configuration
-- `chit/secrets_manifest_v2.yaml` - Add your service's required secrets
-
-### 2. Update Docker Compose
-
-Add the PMOVES.AI environment anchor to your `docker-compose.yml`:
-
-```yaml
-services:
-  danger-infra:
-    <<: [*env-tier-api, *pmoves-healthcheck]
-    # Your existing service configuration...
+```bash
+source env.shared
+source env.tier-api.sh  # or env.tier-data.sh
 ```
 
-### 3. Integrate Health Check
+Secrets default to empty values. Populate them through the PMOVES secrets funnel
+or the deployment environment; do not commit credentials. The CHIT manifest at
+`chit/secrets_manifest_v2.yaml` declares the expected secret names.
 
-Add the health check endpoint to your service:
+## Optional service helpers
+
+Health endpoint:
 
 ```python
-from pmoves_health import add_custom_check, get_health_status
+from pmoves_health import get_health_status
 
 @app.get("/healthz")
 async def health_check():
     return await get_health_status()
 ```
 
-### 4. Add Service Announcement
-
-Add NATS service announcement to your startup:
+NATS announcement:
 
 ```python
 from pmoves_announcer import announce_service
@@ -47,47 +49,21 @@ from pmoves_announcer import announce_service
 @app.on_event("startup")
 async def startup():
     await announce_service(
-        slug="danger-infra",
-        name="PMOVES Danger Infra",
-        url=f"http://danger-infra:8065",
-        port=8065,
-        tier="api"
+        slug="pmoves-crush",
+        name="PMOVES-Crush",
+        url="http://pmoves-crush:8080",
+        port=8080,
+        tier="agent",
     )
 ```
 
-### 5. Test Integration
+## Validation
 
 ```bash
-# Test health check
-curl http://localhost:8065/healthz
-
-# Verify environment variables loaded
-docker compose exec danger-infra env | grep PMOVES
-
-# Verify NATS announcement
-nats sub "services.announce.v1"
+go build ./...
+go test ./internal/agent ./internal/cmd ./internal/config
+docker compose -f docker-compose.pmoves.yml config --quiet
 ```
 
-## Service Details
-
-- **Name:** PMOVES Danger Infra
-- **Slug:** danger-infra
-- **Tier:** api
-- **Port:** 8065
-- **Health Check:** http://localhost:8065/healthz
-- **NATS Enabled:** True
-- **GPU Enabled:** False
-
-## Files Created
-
-- `env.shared` - Base PMOVES.AI environment
-- `env.tier-api` - Tier-specific environment
-- `chit/secrets_manifest_v2.yaml` - CHIT secrets configuration
-- `pmoves_health/` - Health check module
-- `pmoves_announcer/` - NATS service announcer
-- `pmoves_registry/` - Service registry client
-- `docker-compose.pmoves.yml` - PMOVES.AI YAML anchors
-
-## Support
-
-For questions or issues, see the PMOVES.AI documentation.
+The optional visual submodules and launcher scripts are documented in
+`PMOVES_VISUAL_ECOSYSTEM.md`.

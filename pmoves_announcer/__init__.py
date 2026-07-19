@@ -41,9 +41,9 @@ Message Format: JSON with slug, name, url, health_check, tier, port, timestamp, 
 import asyncio
 import json
 import os
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, Optional
 
 
 # Import ServiceTier from shared types if available, otherwise define locally
@@ -81,7 +81,7 @@ class ServiceAnnouncement:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     # NATS subject for announcements
-    SUBJECT: str = "services.announce.v1"
+    SUBJECT: ClassVar[str] = "services.announce.v1"
 
     def to_json(self) -> str:
         """Convert to JSON for NATS publishing."""

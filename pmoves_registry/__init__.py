@@ -1,11 +1,9 @@
 """
 PMOVES.AI Service Registry Integration Template
 
-Service discovery using the PMOVES service registry with fallback chain:
+Service discovery using the implemented PMOVES fallback chain:
 1. Environment variables (static overrides)
-2. Supabase service catalog (dynamic, runtime)
-3. NATS service announcements (real-time, cached)
-4. Docker DNS (development fallback)
+2. Docker DNS (development fallback)
 
 This module provides:
 - CommonServices: Environment-based service URL discovery
@@ -148,7 +146,7 @@ async def get_service_info(
 
     Resolution order:
         1. Environment variable override
-        2. Constructed URL (with warning)
+        2. Constructed Docker DNS URL
 
     Args:
         slug: Service slug to resolve
@@ -201,8 +199,8 @@ async def get_service_url(
         Resolved service URL
 
     Example:
-        >>> await get_service_url("hirag-v2")
-        "http://hi-rag-gateway-v2:8086"
+        >>> await get_service_url("hirag-v2", default_port=8086)
+        "http://hirag-v2:8086"
     """
     info = await get_service_info(slug, default_port=default_port)
     return info.base_url if use_base_url else info.health_check_url

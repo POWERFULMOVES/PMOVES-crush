@@ -42,9 +42,10 @@ const (
 	TodoPendingIcon    string = "•"
 	TodoInProgressIcon string = "→"
 
-	ImageIcon string = "■"
-	TextIcon  string = "≡"
-	SkillIcon string = "▲"
+	ImageIcon  string = "■"
+	TextIcon   string = "≡"
+	SkillIcon  string = "▲"
+	RemoveIcon string = "✕"
 
 	ScrollbarThumb string = "┃"
 	ScrollbarTrack string = "│"
@@ -200,6 +201,7 @@ type Styles struct {
 	WorkingGradFromColor color.Color
 	WorkingGradToColor   color.Color
 	WorkingLabelColor    color.Color // Label text color next to the indicator
+	WorkingTimerColor    color.Color // Elapsed timer suffix color
 
 	// Section Title
 	Section struct {
@@ -564,14 +566,14 @@ type Styles struct {
 		Image    lipgloss.Style
 		Text     lipgloss.Style
 		Skill    lipgloss.Style
+		Remove   lipgloss.Style
 		Deleting lipgloss.Style
 	}
 
 	// Pills styles for todo/queue pills
 	Pills struct {
 		Base               lipgloss.Style // Base pill style with padding
-		Focused            lipgloss.Style // Focused pill with visible border
-		Blurred            lipgloss.Style // Blurred pill with hidden border
+		Focused            lipgloss.Style // Pill with visible rounded border
 		QueueItemPrefix    lipgloss.Style // Prefix for queue list items
 		QueueItemText      lipgloss.Style // Queue list item body text
 		QueueLabel         lipgloss.Style // "N Queued" label text

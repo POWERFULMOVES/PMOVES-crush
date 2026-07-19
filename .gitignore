@@ -42,13 +42,17 @@ Thumbs.db
 .env
 .env.local
 
+# Nix/direnv
+.direnv/
+
 **/.crush/**
 
 /crush
 /tmp/
 
 manpages/
-completions/
-!internal/tui/components/completions/
+completions/crush.*sh
+completions/pmoves-crush.*sh
 .prettierignore
+.task
 **/__pycache__/

@@ -45,7 +45,6 @@ import os
 import asyncio
 
 try:
-    from fastapi import APIRouter, HTTPException
     from fastapi.responses import JSONResponse
     FASTAPI_AVAILABLE = True
 except ImportError:
@@ -294,6 +293,8 @@ if FASTAPI_AVAILABLE:
     def create_health_app(service_name: str = None) -> "FastAPI":
         """Create a minimal FastAPI app with health check."""
         from fastapi import FastAPI
+        if service_name:
+            _health_checker.service_name = service_name
         app = FastAPI(title=service_name or "PMOVES Service")
         app.include_router(health_check_router)
         return app
