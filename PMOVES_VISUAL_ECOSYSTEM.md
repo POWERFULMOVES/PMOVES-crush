@@ -27,8 +27,11 @@ cd pmoves-catwalk
 go run .  # serves on :8080
 ```
 
-Crush's `go.mod` routes `charm.land/catwalk` through the `POWERFULMOVES/pmoves-catwalk`
-fork via a `replace` directive. The fork carries the TensorZero provider addition.
+The `pmoves-catwalk` gitlink records the PMOVES fork alongside Crush. The
+optional local `replace charm.land/catwalk => ./pmoves-catwalk` directive is
+documented in `go.mod`, but remains disabled because normal CI does not
+initialize submodules. The built binary therefore uses the pinned upstream
+Catwalk module until that replace is explicitly enabled.
 
 ## pmoves-gum — TUI Scripting
 
@@ -78,7 +81,7 @@ These submodules live inside PMOVES-crush and are consumed by:
 
 | Component | Current Status | Planned Integration |
 |-----------|---------------|---------------------|
-| pmoves-catwalk | Submodule + go.mod replace + TensorZero provider | Self-hosted instance on fleet |
+| pmoves-catwalk | Recorded submodule; local replace documented but disabled | Validate TensorZero fork and enable it in submodule-aware builds |
 | pmoves-gum | Submodule (clean mirror) + `gum-pmoves` wrapper script | Go-native theme injection |
 | pmoves-vhs | Submodule (clean mirror) + 3 demo tapes | CI-integrated demo regeneration |
 | Showtime | `showtime-status` CLI script | Go-native TUI status bar |

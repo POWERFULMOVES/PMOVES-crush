@@ -50,8 +50,6 @@ func resolveSymbol(ctx context.Context, lspManager *lsp.Manager, symbol, working
 // (definition, rename, call hierarchy) use resolveSymbol; callers that
 // want to iterate all matches (references) use this directly.
 func resolveSymbolResults(ctx context.Context, lspManager *lsp.Manager, symbol, workingDir string) ([]*resolvedSymbol, error) {
-	lspManager.Start(ctx, workingDir)
-
 	// Use word boundaries to avoid matching inside larger identifiers
 	// (e.g. "Bar" inside "myBar"). The symbol is already QuoteMeta'd
 	// so dots and other regex metacharacters are escaped.
@@ -70,6 +68,9 @@ func resolveSymbolResults(ctx context.Context, lspManager *lsp.Manager, symbol, 
 		if err != nil {
 			continue
 		}
+		// Lazy discovery is filetype-driven. Starting from the search directory
+		// cannot select gopls, tsserver, or another language-specific server.
+		lspManager.Start(ctx, absPath)
 
 		client := findLSPClient(lspManager, absPath)
 		if client == nil {

@@ -8,4 +8,3 @@ reviews:
   excluded_branches:
     - "origin/main"
 language: "en-US"
-  doc_target_coverage: 80
