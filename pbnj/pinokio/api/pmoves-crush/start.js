@@ -5,7 +5,7 @@ module.exports = {
       params: {
         message: [
           "echo '◇ crush-pmoves → bootstrapping PMOVES-aware Crush...'",
-          "make -C \"{{args.cwd}}/../../../pmoves\" crush-bootstrap 2>/dev/null || echo 'Bootstrap skipped (may need secrets-funnel first)'",
+          "test -x \"{{args.cwd}}/../../../../../pmoves/scripts/crush-pmoves\" || { echo 'ERROR: PMOVES.AI repo root not found from Pinokio app directory' >&2; exit 1; }",
           "echo ''",
           "echo '◇ Launching Crush...'",
           "echo '  Model: GLM-5.2 (Z.AI Coding Plan)'",
@@ -18,7 +18,7 @@ module.exports = {
     {
       method: "shell.run",
       params: {
-        message: "crush",
+        message: "\"{{args.cwd}}/../../../../../pmoves/scripts/crush-pmoves\"",
         on: [{
           event: "/(http:\\/\\/[0-9.:]+)/",
           done: true

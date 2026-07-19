@@ -26,23 +26,19 @@ cyan()   { printf '\033[36m%s\033[0m' "$1"; }
 # ── Fetch ────────────────────────────────────────────────────────────────────
 
 fetch_health() {
-  local response
-  response=$(timeout 3 bash -c "exec 3<>/dev/tcp/$(echo "$SHOWTIME_URL" | sed 's|http://||; s|/||g; s|:| /dev/tcp/|; s|/dev/tcp/|/dev/tcp/|' | head -1)/healthz" 2>/dev/null && echo "ok" || echo "down")
-  if [ "$response" = "down" ]; then
-    echo '{"state":"offline"}'
-    return
-  fi
+  SHOWTIME_URL="$SHOWTIME_URL" python3 - <<'PY'
+import json
+import os
+import urllib.request
 
-  # Try curl-like fetch via python
-  python3 -c "
-import urllib.request, json, sys
 try:
-    req = urllib.request.Request('$SHOWTIME_URL/health/all')
+    base_url = os.environ['SHOWTIME_URL'].rstrip('/')
+    req = urllib.request.Request(f'{base_url}/health/all')
     with urllib.request.urlopen(req, timeout=3) as resp:
         print(json.dumps(json.loads(resp.read())))
 except Exception:
     print(json.dumps({'state': 'offline'}))
-" 2>/dev/null || echo '{"state":"offline"}'
+PY
 }
 
 # ── Render ───────────────────────────────────────────────────────────────────
@@ -50,10 +46,10 @@ except Exception:
 render_status() {
   local data="$1"
 
-  python3 -c "
+  printf '%s' "$data" | python3 -c "
 import json, sys
 
-data = json.loads('''$data''')
+data = json.load(sys.stdin)
 state = data.get('state', 'unknown')
 services = data.get('services', {})
 total = len(services)
@@ -83,14 +79,19 @@ else:
 }
 
 render_json() {
-  python3 -c "import json; print(json.dumps(json.loads('''$1'''), indent=2))" 2>/dev/null || echo "$1"
+  printf '%s' "$1" | python3 -c "import json, sys; print(json.dumps(json.load(sys.stdin), indent=2))" 2>/dev/null || echo "$1"
 }
 
 render_agents() {
-  python3 -c "
-import urllib.request, json, sys
+  SHOWTIME_URL="$SHOWTIME_URL" python3 - <<'PY'
+import json
+import os
+import sys
+import urllib.request
+
 try:
-    req = urllib.request.Request('$SHOWTIME_URL/agents')
+    base_url = os.environ['SHOWTIME_URL'].rstrip('/')
+    req = urllib.request.Request(f'{base_url}/agents')
     with urllib.request.urlopen(req, timeout=3) as resp:
         agents = json.loads(resp.read())
         for a in agents:
@@ -103,7 +104,7 @@ try:
                 print(f'  \033[31m{glyph}\033[0m {name}: {status}')
 except Exception as e:
     print(f'  Error fetching agents: {e}', file=sys.stderr)
-" 2>/dev/null
+PY
 }
 
 # ── Main ─────────────────────────────────────────────────────────────────────
