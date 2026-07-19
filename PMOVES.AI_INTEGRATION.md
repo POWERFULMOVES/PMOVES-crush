@@ -7,8 +7,9 @@ services to start; integrations must verify configured endpoints before use.
 ## Runtime integration
 
 - The packaged command and release artifacts are named `pmoves-crush`.
-- The live coder prompt recognizes TensorZero, Hi-RAG, Agent Zero, and NATS when
-  project configuration confirms they are available.
+- Provider configuration supports `system_prompt_prefix`; deployments can use
+  that existing runtime hook to add PMOVES-specific TensorZero, Hi-RAG, Agent
+  Zero, and NATS context without changing Crush's recorded base prompt.
 - `pmoves_announcer`, `pmoves_health`, and `pmoves_registry` are reusable Python
   helpers for services launched alongside PMOVES-Crush. They are not imported by
   the Go binary.
