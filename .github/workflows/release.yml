@@ -4,24 +4,47 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write # required to publish GitHub Releases
 
-# PMOVES: this fork does not cut goreleaser releases. The former delegation
-# to charmbracelet/meta's goreleaser workflow could never run here: it
-# requires goreleaser_key + docker secrets that are not configured, AND meta's
-# workflow does not init submodules — with the catwalk replace active in
-# go.mod, its `go mod tidy` would fail even if the secrets existed. The
-# 2026-08-05 snapshot run is the standing evidence that goreleaser-pro fails
-# on this fork (missing key). Publishing binaries from the fork is an open
-# operator decision; when it is made, inline the job WITH
-# `git submodule update --init pmoves-catwalk` after checkout.
+concurrency:
+  group: goreleaser
+  cancel-in-progress: false
+
 jobs:
-  not-configured:
+  # PMOVES: inlined from charmbracelet/meta's goreleaser workflow, which could
+  # never run on this fork: it requires goreleaser-pro + docker/registry
+  # secrets that do not exist here, AND it does not init submodules — with the
+  # catwalk replace active in go.mod its `go mod tidy` would fail even if the
+  # secrets did. This inline version uses goreleaser OSS (no license key) and
+  # publishes GitHub Release artifacts ONLY, per .goreleaser-pmoves.yml.
+  # Tag pushes cut a real release; manual dispatch runs --snapshot and uploads
+  # workflow artifacts so the pipeline is provable without tagging.
+  goreleaser:
     runs-on: ubuntu-latest
     steps:
-      - name: Fail loudly rather than at a confusing goreleaser step
-        run: |
-          echo "::error::Release pipeline is not configured on this fork (no goreleaser/docker secrets, and meta's goreleaser workflow cannot init the pmoves-catwalk submodule the go.mod replace requires). Tagging is not supported until this is inlined — see the comment in this file."
-          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # PMOVES: the catwalk replace in go.mod points at this submodule;
+      # every job that runs the go toolchain must init it first.
+      - run: git submodule update --init pmoves-catwalk
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          version: "~> v2"
+          distribution: goreleaser # OSS — goreleaser-pro needs a license key this fork does not have
+          args: release --clean -f .goreleaser-pmoves.yml ${{ github.event_name == 'workflow_dispatch' && '--snapshot' || '' }}
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: crush-snapshot-dist
+          path: dist/
+          retention-days: 7
