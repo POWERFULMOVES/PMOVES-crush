@@ -11,3 +11,5 @@ jobs:
       golangci_path: .golangci.yml
       golangci_version: v2.13.1
       timeout: 10m
+      # PMOVES: catwalk replace needs the submodule present before golangci
+      pre-run: git submodule update --init pmoves-catwalk

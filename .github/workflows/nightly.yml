@@ -23,6 +23,9 @@ jobs:
           else
             echo "should_run=true" >> $GITHUB_OUTPUT
           fi
+  # NOTE (PMOVES): meta's nightly workflow does not init submodules; with the
+  # catwalk replace active a nightly build would fail (currently moot — this
+  # job startup-fails on the missing goreleaser_key secret before any build).
   nightly:
     needs: check
     if: needs.check.outputs.should_run == 'true'
