@@ -1,0 +1,106 @@
+# PMOVES fork publish config — goreleaser OSS, GitHub Releases ONLY.
+#
+# This is deliberately a SEPARATE file from upstream's .goreleaser.yml: that
+# one is pro-schema (nightly:, includes.from_url) and bound to Charm's
+# publishing infrastructure (AUR ssh keys, homebrew-tap token, winget, fury,
+# cosign keys) — none of which exist on this fork. Inheriting it meant every
+# release path startup-failed (see the 2026-08-05 snapshot run).
+#
+# What this keeps: the full cross-compile matrix, archives, checksums,
+# changelog. What it drops: every external publisher. Adding one back requires
+# its secret to exist first — do not re-add speculatively.
+#
+# The go.mod catwalk replace makes `go mod tidy` (a before-hook) require the
+# pmoves-catwalk submodule; workflows running this MUST init it.
+version: 2
+
+project_name: crush
+
+# NOTE: no `metadata:` block — it is goreleaser-PRO only (upstream pins
+# schema-pro.json). OSS rejects license/homepage/description/maintainers.
+snapshot:
+  version_template: "0.0.0-{{ .Timestamp }}"
+
+before:
+  hooks:
+    - go mod tidy
+    - rm -rf completions
+    - mkdir completions
+    - rm -rf manpages
+    - mkdir manpages
+    - sh -c 'go run . completion bash >./completions/crush.bash'
+    - sh -c 'go run . completion zsh >./completions/crush.zsh'
+    - sh -c 'go run . completion fish >./completions/crush.fish'
+    - sh -c 'go run . man | gzip -c >./manpages/crush.1.gz'
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+      - freebsd
+      - openbsd
+      - netbsd
+      - android
+    goarch:
+      - amd64
+      - arm64
+      - "386"
+      - arm
+    goarm:
+      - "7"
+    ignore:
+      - goos: android
+        goarch: amd64
+      - goos: android
+        goarch: arm
+      - goos: android
+        goarch: "386"
+      - goos: windows
+        goarch: arm
+    ldflags:
+      - -s -w -X github.com/charmbracelet/crush/internal/version.Version={{.Version}}
+    flags:
+      - -trimpath
+
+archives:
+  - name_template: >-
+      crush_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- with .Arm}}v{{ . }}{{ end }}
+    wrap_in_directory: true
+    files:
+      - README*
+      - LICENSE*
+      - manpages/*
+      - completions/*
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore"
+      - Merge pull request
+      - Merge branch
+      - "^ci:"
+
+release:
+  prerelease: auto
+  github:
+    owner: POWERFULMOVES
+    name: PMOVES-crush
