@@ -16,14 +16,8 @@ version: 2
 
 project_name: crush
 
-metadata:
-  mod_timestamp: "{{ .CommitTimestamp }}"
-  license: "FSL-1.1-MIT"
-  homepage: "https://github.com/POWERFULMOVES/PMOVES-crush"
-  description: "PMOVES fork of Crush — terminal AI assistant with the TensorZero provider for PMOVES gateway routing."
-  maintainers:
-    - "POWERFULMOVES"
-
+# NOTE: no `metadata:` block — it is goreleaser-PRO only (upstream pins
+# schema-pro.json). OSS rejects license/homepage/description/maintainers.
 snapshot:
   version_template: "0.0.0-{{ .Timestamp }}"
 
