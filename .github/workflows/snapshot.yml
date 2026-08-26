@@ -30,8 +30,8 @@ jobs:
           go-version-file: go.mod
       - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
-          version: "nightly"
-          distribution: goreleaser-pro
-          args: build --snapshot --clean
+          version: "~> v2"
+          distribution: goreleaser # PMOVES: OSS — the fork has no goreleaser-pro key (2026-08-05 run failed on it)
+          args: release --snapshot --clean -f .goreleaser-pmoves.yml
         env:
-          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
