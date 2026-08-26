@@ -11,6 +11,11 @@ concurrency:
   group: goreleaser
   cancel-in-progress: true
 
+# NOTE (PMOVES): this delegates to charmbracelet/meta's goreleaser workflow,
+# which does NOT init submodules — with the catwalk replace active in go.mod a
+# release build would fail. Never run to date on this fork (no tags, no
+# goreleaser_key secret). If a release is ever cut here, inline the job with
+# `git submodule update --init pmoves-catwalk` after checkout.
 jobs:
   goreleaser:
     uses: charmbracelet/meta/.github/workflows/goreleaser.yml@main
