@@ -5,6 +5,9 @@ on:
     - cron: "0 0 * * *" # every day at midnight
   workflow_dispatch: # allows manual triggering
 
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -23,12 +26,29 @@ jobs:
           else
             echo "should_run=true" >> $GITHUB_OUTPUT
           fi
-  # NOTE (PMOVES): meta's nightly workflow does not init submodules; with the
-  # catwalk replace active a nightly build would fail (currently moot — this
-  # job startup-fails on the missing goreleaser_key secret before any build).
+  # PMOVES: inlined from charmbracelet/meta's nightly (which cannot init
+  # submodules) and stripped of goreleaser: the fork has no GORELEASER_KEY,
+  # so every goreleaser-based path (snapshot/nightly/release) fails at the
+  # pro-license step — the 2026-08-05 snapshot run is the evidence. The
+  # nightly SIGNAL is a cross-OS build of the tracked tip with the catwalk
+  # replace active; publishing binaries is a separate decision for the
+  # operator (see the release.yml guard).
   nightly:
     needs: check
     if: needs.check.outputs.should_run == 'true'
-    uses: charmbracelet/meta/.github/workflows/nightly.yml@main
-    secrets:
-      goreleaser_key: ${{ secrets.GORELEASER_KEY }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # PMOVES: the catwalk replace in go.mod points at this submodule;
+      # every job that runs the go toolchain must init it first.
+      - run: git submodule update --init pmoves-catwalk
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: go build ./...
+      - run: go test -failfast ./...

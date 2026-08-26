@@ -1,38 +1,27 @@
-# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-
 name: goreleaser
 
 on:
   push:
     tags:
-      - v*.*.*
+      - "v*"
 
-concurrency:
-  group: goreleaser
-  cancel-in-progress: true
+permissions:
+  contents: read
 
-# NOTE (PMOVES): this delegates to charmbracelet/meta's goreleaser workflow,
-# which does NOT init submodules — with the catwalk replace active in go.mod a
-# release build would fail. Never run to date on this fork (no tags, no
-# goreleaser_key secret). If a release is ever cut here, inline the job with
+# PMOVES: this fork does not cut goreleaser releases. The former delegation
+# to charmbracelet/meta's goreleaser workflow could never run here: it
+# requires goreleaser_key + docker secrets that are not configured, AND meta's
+# workflow does not init submodules — with the catwalk replace active in
+# go.mod, its `go mod tidy` would fail even if the secrets existed. The
+# 2026-08-05 snapshot run is the standing evidence that goreleaser-pro fails
+# on this fork (missing key). Publishing binaries from the fork is an open
+# operator decision; when it is made, inline the job WITH
 # `git submodule update --init pmoves-catwalk` after checkout.
 jobs:
-  goreleaser:
-    uses: charmbracelet/meta/.github/workflows/goreleaser.yml@main
-    with:
-      go_version: "1.26.6"
-      macos_sign_entitlements: "./.github/entitlements.plist"
-    secrets:
-      docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
-      docker_token: ${{ secrets.DOCKERHUB_TOKEN }}
-      gh_pat: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-      goreleaser_key: ${{ secrets.GORELEASER_KEY }}
-      fury_token: ${{ secrets.FURY_TOKEN }}
-      nfpm_gpg_key: ${{ secrets.NFPM_GPG_KEY }}
-      nfpm_passphrase: ${{ secrets.NFPM_PASSPHRASE }}
-      aur_key: ${{ secrets.AUR_KEY }}
-      macos_sign_p12: ${{ secrets.MACOS_SIGN_P12 }}
-      macos_sign_password: ${{ secrets.MACOS_SIGN_PASSWORD }}
-      macos_notary_issuer_id: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
-      macos_notary_key_id: ${{ secrets.MACOS_NOTARY_KEY_ID }}
-      macos_notary_key: ${{ secrets.MACOS_NOTARY_KEY }}
+  not-configured:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail loudly rather than at a confusing goreleaser step
+        run: |
+          echo "::error::Release pipeline is not configured on this fork (no goreleaser/docker secrets, and meta's goreleaser workflow cannot init the pmoves-catwalk submodule the go.mod replace requires). Tagging is not supported until this is inlined — see the comment in this file."
+          exit 1
