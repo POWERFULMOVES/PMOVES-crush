@@ -218,3 +218,9 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
+
+// PMOVES: route catwalk at the pmoves-catwalk fork submodule, which carries
+// the TensorZero provider for PMOVES gateway routing. Every workflow that
+// runs the go toolchain must init this submodule first (see build.yml):
+// with the replace active, go mod tidy fails on a bare checkout.
+replace charm.land/catwalk => ./pmoves-catwalk

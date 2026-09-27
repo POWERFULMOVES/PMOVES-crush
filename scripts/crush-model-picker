@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# crush-model-picker — interactive model selection powered by gum + catwalk
+#
+# Lists available models from the pmoves-catwalk provider registry,
+# lets the user pick one interactively, and outputs the selection.
+#
+# Usage:
+#   crush-model-picker                 # pick from all providers
+#   crush-model-picker --provider zai  # pick from specific provider
+#   crush-model-picker --large         # pick only large/default models
+#   crush-model-picker --small         # pick only small/fast models
+#
+# Output: "provider/model_id" on stdout (for scripting)
+set -euo pipefail
+
+PROVIDER=""
+SIZE=""
+REPO_ROOT="${PMOVES_REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || true)}"
+CATWALK_DIR="${REPO_ROOT}/PMOVES-crush/pmoves-catwalk"
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --provider) PROVIDER="$2"; shift 2 ;;
+    --large) SIZE="large"; shift ;;
+    --small) SIZE="small"; shift ;;
+    *) echo "Unknown option: $1" >&2; exit 1 ;;
+  esac
+done
+
+if [ ! -d "$CATWALK_DIR" ]; then
+  CATWALK_DIR="$(dirname "$(readlink -f "$0")")/../pmoves-catwalk"
+fi
+
+CONFIGS_DIR="$CATWALK_DIR/internal/providers/configs"
+
+if [ ! -d "$CONFIGS_DIR" ]; then
+  echo "ERROR: catwalk configs not found at $CONFIGS_DIR" >&2
+  exit 1
+fi
+
+# Build model list from JSON configs
+MODELS=$(
+  python3 -c "
+import json, os, glob
+
+configs_dir = '$CONFIGS_DIR'
+provider_filter = '$PROVIDER'
+size = '$SIZE'
+
+for f in sorted(glob.glob(os.path.join(configs_dir, '*.json'))):
+    provider_key = os.path.basename(f).replace('.json', '')
+    if provider_filter and provider_key != provider_filter:
+        continue
+    try:
+        data = json.load(open(f))
+    except:
+        continue
+
+    name = data.get('name', provider_key)
+    models = data.get('models', [])
+
+    if size == 'large':
+        target = data.get('default_large_model_id', '')
+        for m in models:
+            if m['id'] == target:
+                print(f\"{provider_key}/{m['id']} — {name}: {m.get('name', m['id'])} ({m.get('context_window', '?')} ctx)\")
+                break
+    elif size == 'small':
+        target = data.get('default_small_model_id', '')
+        for m in models:
+            if m['id'] == target:
+                print(f\"{provider_key}/{m['id']} — {name}: {m.get('name', m['id'])} ({m.get('context_window', '?')} ctx)\")
+                break
+    else:
+        for m in models:
+            print(f\"{provider_key}/{m['id']} — {name}: {m.get('name', m['id'])} ({m.get('context_window', '?')} ctx)\")
+" 2>/dev/null
+)
+
+if [ -z "$MODELS" ]; then
+  echo "No models found." >&2
+  exit 1
+fi
+
+# Use gum to pick (fall back to gum-pmoves if available)
+GUM_CMD="gum"
+if command -v gum-pmoves >/dev/null 2>&1; then
+  GUM_CMD="gum-pmoves"
+fi
+
+SELECTION=$(echo "$MODELS" | $GUM_CMD choose --header "Select a model:" --height 20)
+
+# Output just provider/model_id
+echo "$SELECTION" | sed 's/ —.*//'
