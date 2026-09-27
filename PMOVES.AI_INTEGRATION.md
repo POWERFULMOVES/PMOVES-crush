@@ -91,3 +91,29 @@ nats sub "services.announce.v1"
 ## Support
 
 For questions or issues, see the PMOVES.AI documentation.
+
+## ACP Server (crush acp) — added 2026-09-27
+
+`crush acp` speaks Agent Client Protocol (ACP) v1 — newline-delimited
+JSON-RPC 2.0 over stdio — so ACP clients (Zed, JetBrains, Spynel, the
+agentclientprotocol registry ecosystem) can drive Crush headlessly.
+
+- Methods: `initialize`, `session/new`, `session/load`, `session/resume`,
+  `session/prompt` (async), `cancel`, `session/cancel` (notification);
+  `permission/set_options` and `session/set_mode` are acknowledged no-ops
+  because the underlying `crush run` turn auto-approves tool permissions.
+- Each prompt turn execs `crush run --quiet [--session <uuid>] <prompt>`
+  in the session cwd; stdout is streamed to the client as
+  `session/update` / `agent_message_chunk` notifications (UTF-8 safe).
+- Session continuity: ACP session id → crush session uuid mappings
+  persist in the state file (`$XDG_CACHE_HOME/crush/acp-sessions.json`,
+  override `CRUSH_ACP_STATE`); `session/load`/`session/resume` restore a
+  conversation across adapter restarts. New crush sessions are discovered
+  by diffing `crush session list --json` around the first turn of a
+  session, which is why turns are serialized process-wide.
+- Spawning: turns run the running binary by default (`os.Executable()`);
+  override with `CRUSH_ACP_BIN`.
+- Interop ground truth: PMOVES-spynel `internal/harness/acp.go` (first
+  fleet consumer); registry entry `crush-acp` in POWERFULMOVES/PMOVES-registry.
+- Files: `internal/acp/` (server, protocol, runner, state) +
+  `internal/cmd/acp.go`; tests `internal/acp/server_test.go`.
