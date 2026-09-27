@@ -84,7 +84,12 @@ func (h *harness) send(t *testing.T, line string) {
 
 func (h *harness) next(t *testing.T) map[string]any {
 	t.Helper()
-	line := <-h.lines
+	var line string
+	select {
+	case line = <-h.lines:
+	case <-time.After(20 * time.Second):
+		t.Fatal("timed out waiting for a response line from the ACP server")
+	}
 	var msg map[string]any
 	if err := json.Unmarshal([]byte(line), &msg); err != nil {
 		t.Fatalf("decode %q: %v", line, err)

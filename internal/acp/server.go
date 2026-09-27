@@ -73,7 +73,12 @@ func (s *Server) Run(ctx context.Context) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		line := bytes.TrimSpace(scanner.Bytes())
+		// Clone before dispatch: the scanner reuses its buffer on every
+		// Scan, and the async prompt goroutine below outlives this
+		// iteration — an aliased line would be silently corrupted by the
+		// next request. Measured as a Windows CI hang: the goroutine
+		// decoded garbage and the response never matched the request id.
+		line := bytes.Clone(bytes.TrimSpace(scanner.Bytes()))
 		if len(line) == 0 {
 			continue
 		}
