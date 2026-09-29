@@ -158,6 +158,16 @@ func (s *Server) handleInitialize(raw json.RawMessage) (any, *dispatchError) {
 				Resume: map[string]any{},
 			},
 		},
+		AuthMethods: []authMethod{
+			{
+				ID:          "crush-login",
+				Name:        "Log in with Crush",
+				Type:        "terminal",
+				Description: "Interactive terminal login (Hyper device flow by default; run `crush login copilot` for GitHub Copilot OAuth)",
+				Args:        []string{"login"},
+				Meta:        map[string]any{"terminal-auth": true},
+			},
+		},
 	}, nil
 }
 

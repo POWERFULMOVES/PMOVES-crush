@@ -155,6 +155,64 @@ func TestInitializeHandshake(t *testing.T) {
 	}
 }
 
+func TestInitializeDeclaresAuthMethods(t *testing.T) {
+	// Direct call, no pipe harness: handleInitialize never touches the
+	// transport, so this runs on every platform including windows.
+	s := NewServer(nil, io.Discard, &fakeRunner{}, tempStore(t), nil)
+	raw, derr := s.handleInitialize(json.RawMessage(`{"protocolVersion":1,"clientInfo":{"name":"t","version":"0"}}`))
+	if derr != nil {
+		t.Fatalf("handleInitialize error: %v", derr)
+	}
+	result, ok := raw.(initializeResult)
+	if !ok {
+		t.Fatalf("handleInitialize returned %T, want initializeResult", raw)
+	}
+	if len(result.AuthMethods) != 1 {
+		t.Fatalf("authMethods = %d entries, want 1", len(result.AuthMethods))
+	}
+	m := result.AuthMethods[0]
+	if m.ID != "crush-login" {
+		t.Fatalf("authMethods[0].id = %q, want crush-login", m.ID)
+	}
+	if m.Meta["terminal-auth"] != true {
+		t.Fatalf("authMethods[0]._meta missing terminal-auth marker: %v", m.Meta)
+	}
+
+	// Wire shape: the registry validator reads the direct "type" field
+	// first (AUTHENTICATION.md declaration shape), _meta as fallback — so
+	// the JSON carries both, plus id + name + args.
+	wire, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("marshal initializeResult: %v", err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(wire, &decoded); err != nil {
+		t.Fatalf("decode wire JSON: %v", err)
+	}
+	methods, ok := decoded["authMethods"].([]any)
+	if !ok || len(methods) != 1 {
+		t.Fatalf("wire authMethods missing or wrong arity: %s", wire)
+	}
+	entry, _ := methods[0].(map[string]any)
+	if entry["id"] != "crush-login" {
+		t.Fatalf("wire id = %v, want crush-login", entry["id"])
+	}
+	if entry["name"] != "Log in with Crush" {
+		t.Fatalf("wire name = %v, want 'Log in with Crush'", entry["name"])
+	}
+	args, _ := entry["args"].([]any)
+	if len(args) != 1 || args[0] != "login" {
+		t.Fatalf("wire args = %v, want [login]", entry["args"])
+	}
+	meta, _ := entry["_meta"].(map[string]any)
+	if meta == nil || meta["terminal-auth"] != true {
+		t.Fatalf("wire _meta missing terminal-auth marker: %v", entry["_meta"])
+	}
+	if entry["type"] != "terminal" {
+		t.Fatalf("wire type = %v, want terminal (AUTHENTICATION.md declaration shape)", entry["type"])
+	}
+}
+
 func TestPromptTurnStreamsChunksAndStoresCrushSession(t *testing.T) {
 	skipWindowsPipeHarness(t)
 	dir := t.TempDir()

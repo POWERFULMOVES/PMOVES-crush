@@ -113,6 +113,11 @@ agentclientprotocol registry ecosystem) can drive Crush headlessly.
   session, which is why turns are serialized process-wide.
 - Spawning: turns run the running binary by default (`os.Executable()`);
   override with `CRUSH_ACP_BIN`.
+- Auth: `initialize` declares `authMethods` — Terminal Auth
+  (`id: crush-login`, `type: terminal`, `args: ["login"]`,
+  `_meta.terminal-auth`) mapping to `crush login` (Hyper device flow by
+  default; `crush login copilot` for GitHub Copilot OAuth), per the
+  registry AUTHENTICATION.md agent/terminal requirement.
 - Interop ground truth: PMOVES-spynel `internal/harness/acp.go` (first
   fleet consumer); registry entry `crush-acp` in POWERFULMOVES/PMOVES-registry.
 - Files: `internal/acp/` (server, protocol, runner, state) +
