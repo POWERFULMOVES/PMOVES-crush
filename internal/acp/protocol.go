@@ -65,9 +65,25 @@ type sessionCapabilities struct {
 	Close  map[string]any `json:"close,omitempty"`
 }
 
+// authMethod advertises one way a client can authenticate the agent, per the
+// ACP auth-methods RFD (https://agentclientprotocol.com/rfds/auth-methods).
+// `type` is the registry's declaration field (AUTHENTICATION.md examples);
+// the terminal-auth _meta marker additionally covers ACP clients that key
+// on _meta. A terminal method's args replace the default command arguments
+// for the setup launch.
+type authMethod struct {
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Type        string         `json:"type,omitempty"`
+	Description string         `json:"description,omitempty"`
+	Args        []string       `json:"args,omitempty"`
+	Meta        map[string]any `json:"_meta,omitempty"`
+}
+
 type initializeResult struct {
 	ProtocolVersion   int               `json:"protocolVersion"`
 	AgentCapabilities agentCapabilities `json:"agentCapabilities"`
+	AuthMethods       []authMethod      `json:"authMethods"`
 }
 
 type sessionParams struct {
